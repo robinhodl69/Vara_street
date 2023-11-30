@@ -1,4 +1,6 @@
 # Vara_street
-Synthetic assets lending platform
 
+Optimize your DeFi yield strategies with Vara_Street
+
+Use your synthetic assets to borrow $stablecoin
 
