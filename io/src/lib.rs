@@ -38,9 +38,9 @@ pub struct Loan {
    
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LoanStatus {
-    Active, // El préstamo está activo
-    Repaid, // El préstamo ha sido devuelto
-    Liquidated, // El préstamo ha sido liquidado
+    Active, // A loan is active
+    Repaid, // The loan has been repaid
+    Liquidated, // The loan has been liquidated
 }
 
 
