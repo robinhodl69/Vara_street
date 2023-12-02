@@ -32,7 +32,7 @@ pub enum Event {
 pub struct Loan {
     borrower: ActorId, // The identity of the borrower
     amount: u128, // The amount of the loan
-    due_date: u64, // The loan to Value ratio
+    ltvratio: u64, // The loan to Value ratio
     status: LoanStatus, // The loan status
 }
    
