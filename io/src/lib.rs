@@ -28,12 +28,13 @@ pub enum Event {
 
 
 // 3. Create your own Struct
-#[derive(Default, Encode, Decode, Clone, TypeInfo)]
+#[derive( Encode, Decode, Clone, TypeInfo)]
 pub struct Loan {
     borrower: ActorId, // The identity of the borrower
     amount: u128, // The amount of the loan
     ltvratio: u64, // The loan to Value ratio
-    status: LoanStatus, // The loan status
+    status: LoanStatus, // The status of the loan
+
 }
    
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
