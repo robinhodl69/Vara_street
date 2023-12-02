@@ -66,13 +66,6 @@ pub enum LenderStatus {
 
 }
 
-#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
-pub enum LiquidityStatus {
-    Active, // A position is active
-    Inactive, // User has closed the position
-
-}
-
 
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LoanStatus {
@@ -89,8 +82,6 @@ pub enum LiquidityStatus {
     Inactive, // a liqudity positive is inactive
 
 }
-
-
 
 
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
