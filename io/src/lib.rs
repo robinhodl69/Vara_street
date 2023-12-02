@@ -28,7 +28,7 @@ pub enum Event {
 
 
 // 3. Borrower struc
-#[derive( Encode, Decode, Clone, TypeInfo)]
+#[derive(Debug, Clone, Encode, Decode, TypeInfo)]
 pub struct UserBorrower {
 
    
@@ -40,20 +40,16 @@ pub struct UserBorrower {
 }
 
 // 3. Provider struc
-#[derive( Encode, Decode, Clone, TypeInfo)]
-pub struct UserProvider {
-
-
-    status: LiquidityStatus, // The status of the loan
-    loanamount: (u128), // The amount of the loan
-    ltvratio: u64, // The loan to Value ratio
-    historial: Vec<(u128,Loans)> // The historial of the loans   
-
+#[derive(Debug, Clone, Encode, Decode, TypeInfo)]
+pub struct UserLender {
+    status: LenderStatus, // The status of the lender
+    liquidity: u128, // amount of liquidity provided
+    loans_given: Vec<(u128, Liquiditystatus)>, // The history of loans given
 }
 
 
-
-#[derive( Encode, Decode, Clone, TypeInfo)]
+// 3. Loan struc
+#[derive(Debug, Clone, Encode, Decode, TypeInfo)]
 pub struct Loans  {
 
     id: u128,    
@@ -64,11 +60,28 @@ pub struct Loans  {
 }
 
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+pub enum LenderStatus {
+    Active, // A loan is active
+    Inactive, // The loan has been repaid
+
+}
+
+#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+pub enum LiquidityStatus {
+    Active, // A position is active
+    Inactive, // User has closed the position
+
+}
+
+
+#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LoanStatus {
     Active, // A loan is active
     Inactive, // The loan has been repaid
 
 }
+
+
 
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LiquidityStatus {
@@ -97,6 +110,13 @@ impl Metadata for ContractMetadata {
     type Others = ();
     type Reply = ();
     type Signal = ();
-    type State = Loan;
+    type State = GlobalState;
+}
 
+// 5. Define the global state
+#[derive(Default, Debug, Clone, Encode, Decode, TypeInfo)]
+pub struct GlobalState {
+    id: u128,
+    amount: u128, // The amount of the loan
+    closing: LoanStatus, // The status of the loan
 }
