@@ -9,11 +9,11 @@ use gmeta::{InOut,Metadata};
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum Action {
     //  Actions
-    DepositFunds, // User deposit funds into the protocol
-    WithdrawFunds, // User withdraw funds from the protocol 
-    Borrow, // User borrows funds from the protocol
-    Repay, // User repays a loan
-    Liquidate, // A loan is liquidated because the loan to value ratio is lower than the minimum required
+    DepositFunds(u128), // User deposit funds into the protocol 
+    WithdrawFunds(u128), // User withdraw funds from the protocol 
+    Borrow(u128), // User borrows funds from the protocol
+    Repay(u128), // User repays a loan
+    Liquidate(u128), // A loan is liquidated because the loan to value ratio is lower than the minimum required
 }
 // 2.  Events
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
@@ -27,21 +27,64 @@ pub enum Event {
 }
 
 
-// 3. Create your own Struct
+// 3. Borrower struc
 #[derive( Encode, Decode, Clone, TypeInfo)]
-pub struct Loan {
-    borrower: ActorId, // The identity of the borrower
-    amount: u128, // The amount of the loan
-    ltvratio: u64, // The loan to Value ratio
+pub struct UserBorrower {
+
+   
     status: LoanStatus, // The status of the loan
+    loanamount: (u128), // The amount of the loan
+    ltvratio: u64, // The loan to Value ratio
+    historial: Vec<(u128,Loans)> // The historial of the loans   
 
 }
-   
+
+// 3. Provider struc
+#[derive( Encode, Decode, Clone, TypeInfo)]
+pub struct UserProvider {
+
+
+    status: LiquidityStatus, // The status of the loan
+    loanamount: (u128), // The amount of the loan
+    ltvratio: u64, // The loan to Value ratio
+    historial: Vec<(u128,Loans)> // The historial of the loans   
+
+}
+
+
+
+#[derive( Encode, Decode, Clone, TypeInfo)]
+pub struct Loans  {
+
+    id: u128,    
+    amount: u128, // The amount of the loan
+    closing: LoanStatus, // The status of the loan 
+
+
+}
+
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LoanStatus {
     Active, // A loan is active
-    Repaid, // The loan has been repaid
-    Liquidated, // The loan has been liquidated
+    Inactive, // The loan has been repaid
+
+}
+
+#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+pub enum LiquidityStatus {
+    Active, // A liqudity positive is active
+    Inactive, // a liqudity positive is inactive
+
+}
+
+
+
+
+#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+pub enum UserStatus {
+    Active, // A loan is active
+    Inactive, // The loan has been repaid
+
 }
 
 
