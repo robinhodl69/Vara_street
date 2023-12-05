@@ -104,4 +104,6 @@ pub struct GlobalState {
     pub loan_status: Vec<LoanStatus>,
     pub liquidity_status: Vec<LiquidityStatus>,
     pub user_status: Vec<UserStatus>,
+    pub liquidation_threshold: u128, // The liquidation threshold - Changed from Vec<u128> to u128
+
 }

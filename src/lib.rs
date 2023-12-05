@@ -7,13 +7,12 @@ use io::*;
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 
-// 1. Create the main state as a static variable.
-static mut STATE:Option<CustomStruct> = None;
+// 1. The main state as a static variable.
+static mut STATE: Option<GlobalState> = None;
 
 
-
-// 2. Create the mutability function for your state.
-fn state_mut() -> &'static mut CustomStruct {
+// 2. The mutability function for state.
+fn state_mut() -> &'static mut GlobalState {
 
     let state = unsafe {  STATE.as_mut()};
 
@@ -22,40 +21,149 @@ fn state_mut() -> &'static mut CustomStruct {
 
 }
 
-// Create a public State
-#[derive(Default, Encode, Decode, TypeInfo)]
-pub struct CustomStruct {
-    pub firstfield: String,
-    pub secondfield: u128,
-    pub thirdfield: ActorId,
+// 3. Public State
+#[derive(Debug, Clone, Default, Encode, Decode, TypeInfo)]
+pub struct GlobalState {
+    pub borrowers: Vec<UserBorrower>,
+    pub lenders: Vec<UserLender>,
+    pub loans: Vec<Loans>,
+    pub loan_status: Vec<LoanStatus>,
+    pub liquidity_status: Vec<LiquidityStatus>,
+    pub user_status: Vec<UserStatus>,
+    pub liquidation_threshold: u128, // The liquidation threshold - Changed from Vec<u128> to u128
 }
 
-// Create a implementation on State
-impl CustomStruct {
-    #[allow(dead_code)]
-    fn firstmethod(&mut self) {}
-    #[allow(dead_code)]
-    fn secondmethod(&mut self) { }
-    #[allow(dead_code)]
-    fn thirdmethod(&mut self) {}
+// 3.1 implementations of the state
+
+impl GlobalState {
+    pub fn deposit_funds(&mut self, amount: u128, lender: UserLender) {
+        let lender = self.lenders.iter_mut().find(|l| *l == lender);
+        if let Some(lender) = lender {
+            lender.liquidity += amount;
+        }
+        // Emit FundsDeposited event
+    }
+
+    pub fn withdraw_funds(&mut self, amount: u128, lender: UserLender) {
+        let lender = self.lenders.iter_mut().find(|l| *l == lender);
+        if let Some(lender) = lender {
+            lender.liquidity -= amount;
+        }
+        // Emit FundsWithdrawn event
+    }
+
+    pub fn borrow(&mut self, amount: u128, borrower: UserBorrower) {
+        let loan = Loans { id: self.loans.len() as u128, amount, closing: LoanStatus::Active };
+        let borrower = self.borrowers.iter_mut().find(|b| *b == borrower);
+        if let Some(borrower) = borrower {
+            borrower.loanamount += amount;
+            borrower.historial.push((loan.id, loan));
+        }
+        // Emit LoanBorrowed event
+    }
+
+    pub fn repay(&mut self, amount: u128, borrower: UserBorrower) {
+        let borrower = self.borrowers.iter_mut().find(|b| *b == borrower);
+        if let Some(borrower) = borrower {
+            borrower.loanamount -= amount;
+            // Find the loan and update its amount or status
+        }
+        // Emit LoanRepaid event
+    }
+
+    pub fn set_liquidation_threshold(&mut self, new_threshold: u128) {
+        // TODO: Check that the caller is the owner of the contract
+        self.liquidation_threshold = new_threshold;
+    }
+    
+    pub fn liquidate(&mut self, loan: Loans, liquidator: UserLender) {
+        // TODO: Calculate the loan to value
+        let loan_to_value = /* ... */;
+    
+        if loan_to_value <= self.liquidation_threshold {
+            let loan = self.loans.iter_mut().find(|l| *l == loan);
+            if let Some(loan) = loan {
+                loan.closing = LoanStatus::Inactive;
+            }
+            // Emit LoanLiquidated event
+        }
+    }
+
 }
 
+// 4. Create a implementation on State 
+impl GlobalState {
+    #[allow(dead_code)]
+    pub fn deposit_funds(&mut self, amount: u128, lender: UserLender) {
+        let lender = self.lenders.iter_mut().find(|l| *l == lender);
+        if let Some(lender) = lender {
+            lender.liquidity += amount;
+        }
+        // Emit FundsDeposited event
+    }
 
-// 3. Create the init() function of your contract.
+    #[allow(dead_code)]
+    pub fn withdraw_funds(&mut self, amount: u128, lender: UserLender) {
+        let lender = self.lenders.iter_mut().find(|l| *l == lender);
+        if let Some(lender) = lender {
+            lender.liquidity -= amount;
+        }
+        // Emit FundsWithdrawn event
+    }
+
+    #[allow(dead_code)]
+    pub fn borrow(&mut self, amount: u128, borrower: UserBorrower) {
+        let loan = Loans { id: self.loans.len() as u128, amount, closing: LoanStatus::Active };
+        let borrower = self.borrowers.iter_mut().find(|b| *b == borrower);
+        if let Some(borrower) = borrower {
+            borrower.loanamount += amount;
+            borrower.historial.push((loan.id, loan));
+        }
+        // Emit LoanBorrowed event
+    }
+
+    #[allow(dead_code)]
+    pub fn repay(&mut self, amount: u128, borrower: UserBorrower) {
+        let borrower = self.borrowers.iter_mut().find(|b| *b == borrower);
+        if let Some(borrower) = borrower {
+            borrower.loanamount -= amount;
+            // Find the loan and update its amount or status
+        }
+        // Emit LoanRepaid event
+    }
+
+    #[allow(dead_code)]
+    pub fn set_liquidation_threshold(&mut self, new_threshold: u128) {
+        // TODO: Check that the caller is the owner of the contract
+        self.liquidation_threshold = new_threshold;
+    }
+    
+    #[allow(dead_code)]
+    pub fn liquidate(&mut self, loan: Loans, liquidator: UserLender) {
+        // TODO: Calculate the loan to value
+        let loan_to_value = /* ... */;
+    
+        if loan_to_value <= self.liquidation_threshold {
+            let loan = self.loans.iter_mut().find(|l| *l == loan);
+            if let Some(loan) = loan {
+                loan.closing = LoanStatus::Inactive;
+            }
+            // Emit LoanLiquidated event
+        }
+    }
+}
+
+// 5. Create the init() function of your contract.
 #[no_mangle]
-extern "C" fn init () {
-
-    let state = CustomStruct {
+extern "C" fn init() {
+    let state = GlobalState {
         ..Default::default()
     };
 
     unsafe { STATE = Some(state) };
-
-
 }
 
-
-// 4.Create the Handle() function of your contract.
+// 4.Create the Handle() function of your contract. Aqui
 #[no_mangle]
 extern "C" fn handle(){
 
