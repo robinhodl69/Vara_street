@@ -42,11 +42,10 @@ pub struct UserBorrower {
 // 3. Provider struc
 #[derive(Debug, Clone, Encode, Decode, TypeInfo)]
 pub struct UserLender {
-    status: LenderStatus, // The status of the lender
+    status: UserStatus, // The status of the lender
     liquidity: u128, // amount of liquidity provided
-    loans_given: Vec<(u128, Liquiditystatus)>, // The history of loans given
+    loans_given: Vec<(u128, LiquidityStatus)>, // The history of loans given
 }
-
 
 // 3. Loan struc
 #[derive(Debug, Clone, Encode, Decode, TypeInfo)]
@@ -58,14 +57,6 @@ pub struct Loans  {
 
 
 }
-
-#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
-pub enum LenderStatus {
-    Active, // A loan is active
-    Inactive, // The loan has been repaid
-
-}
-
 
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LoanStatus {
@@ -105,9 +96,12 @@ impl Metadata for ContractMetadata {
 }
 
 // 5. Define the global state
-#[derive(Default, Debug, Clone, Encode, Decode, TypeInfo)]
+#[derive(Debug, Clone, Default, Encode, Decode, TypeInfo)]
 pub struct GlobalState {
-    id: u128,
-    amount: u128, // The amount of the loan
-    closing: LoanStatus, // The status of the loan
+    pub borrowers: Vec<UserBorrower>,
+    pub lenders: Vec<UserLender>,
+    pub loans: Vec<Loans>,
+    pub loan_status: Vec<LoanStatus>,
+    pub liquidity_status: Vec<LiquidityStatus>,
+    pub user_status: Vec<UserStatus>,
 }
