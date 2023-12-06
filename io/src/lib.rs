@@ -6,7 +6,7 @@ use hashbrown::HashMap;
 
 
 // 1. Actions
-#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum Action {
     //  Actions
     DepositFunds(u128), // User deposit funds into the protocol 
@@ -16,7 +16,7 @@ pub enum Action {
     Liquidate(u128), // A loan is liquidated because the loan to value ratio is lower than the minimum required
 }
 // 2.  Events
-#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum Event {
     //  Events
     FundsDeposited, // Funds have been deposited into the protocol
@@ -28,7 +28,7 @@ pub enum Event {
 
 
 // 3. Borrower struc
-#[derive(Debug, Clone, Encode, Decode, TypeInfo)]
+#[derive(Debug, Clone)]
 pub struct UserBorrower {
 
    
@@ -40,7 +40,7 @@ pub struct UserBorrower {
 }
 
 // 3. Provider struc
-#[derive(Debug, Clone, Encode, Decode, TypeInfo)]
+#[derive(Debug, Clone)]
 pub struct UserLender {
     status: UserStatus, // The status of the lender
     liquidity: u128, // amount of liquidity provided
@@ -48,7 +48,8 @@ pub struct UserLender {
 }
 
 // 3. Loan struc
-#[derive(Debug, Clone, Encode, Decode, TypeInfo)]
+#[derive(Debug, Clone)]
+
 pub struct Loans  {
 
     id: u128,    
@@ -63,8 +64,9 @@ pub struct Loans  {
 
 
 
-#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LoanStatus {
+    #[default]
     Active, // A loan is active
     Inactive, // The loan has been repaid
 
@@ -72,16 +74,18 @@ pub enum LoanStatus {
 
 
 
-#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LiquidityStatus {
+    #[default]
     Active, // A liqudity positive is active
     Inactive, // a liqudity positive is inactive
 
 }
 
 
-#[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum UserStatus {
+    #[default]
     Active, // A loan is active
     Inactive, // The loan has been repaid
 
@@ -101,7 +105,7 @@ impl Metadata for ContractMetadata {
 }
 
 // 5. Define the global state
-#[derive(Debug, Clone, Default, Encode, Decode, TypeInfo)]
+#[derive(Debug, Clone, Default)]
 pub struct IoGlobalState  {
     pub borrowers: Vec<(ActorId,UserBorrower)>,
     pub lenders: Vec<(ActorId,UserLender)>,
@@ -111,7 +115,7 @@ pub struct IoGlobalState  {
     pub user_status: Vec<(ActorId,UserStatus)>,
 }
 
-#[derive(Debug, Clone, Default, TypeInfo)]
+#[derive(Default, Encode, Decode, Clone, TypeInfo)]
 pub struct GlobalState {
 
     pub borrowers: HashMap<ActorId, UserBorrower>,

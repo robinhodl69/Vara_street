@@ -22,7 +22,7 @@ fn state_mut() -> &'static mut GlobalState {
 }
 
 // 3. Public State
-#[derive(Debug, Clone, Default, TypeInfo)]
+#[derive(Debug, Clone, Default)]
 pub struct GlobalState {
 
     pub borrowers: HashMap<ActorId, UserBorrower>,
@@ -39,63 +39,29 @@ pub struct GlobalState {
 impl GlobalState {
     #[allow(dead_code)]
     pub fn deposit_funds(&mut self, amount: u128, lender: UserLender) {
-        let lender = self.lenders.iter_mut().find(|l| *l == lender);
-        if let Some(lender) = lender {
-            lender.liquidity += amount;
-        }
-        // Emit FundsDeposited event
+        // add function 
     }
 
     #[allow(dead_code)]
     pub fn withdraw_funds(&mut self, amount: u128, lender: UserLender) {
-        let lender = self.lenders.iter_mut().find(|l| *l == lender);
-        if let Some(lender) = lender {
-            lender.liquidity -= amount;
-        }
-        // Emit FundsWithdrawn event
+        // add function
     }
 
     #[allow(dead_code)]
     pub fn borrow(&mut self, amount: u128, borrower: UserBorrower) {
-        let loan = Loans { id: self.loans.len() as u128, amount, closing: LoanStatus::Active };
-        let borrower = self.borrowers.iter_mut().find(|b| *b == borrower);
-        if let Some(borrower) = borrower {
-            borrower.loanamount += amount;
-            borrower.historial.push((loan.id, loan));
-        }
-        // Emit LoanBorrowed event
+        // Add function
     }
 
     #[allow(dead_code)]
     pub fn repay(&mut self, amount: u128, borrower: UserBorrower) {
-        let borrower = self.borrowers.iter_mut().find(|b| *b == borrower);
-        if let Some(borrower) = borrower {
-            borrower.loanamount -= amount;
-            // Find the loan and update its amount or status
-        }
-        // Emit LoanRepaid event
-    }
-
-    #[allow(dead_code)]
-    pub fn set_liquidation_threshold(&mut self, new_threshold: u128) {
-        // TODO: Check that the caller is the owner of the contract
-        self.liquidation_threshold = new_threshold;
+        // add function
     }
     
     #[allow(dead_code)]
     pub fn liquidate(&mut self, loan: Loans, liquidator: UserLender) {
-        // TODO: Calculate the loan to value
-        let loan_to_value = /* ... */;
-    
-        if loan_to_value <= self.liquidation_threshold {
-            let loan = self.loans.iter_mut().find(|l| *l == loan);
-            if let Some(loan) = loan {
-                loan.closing = LoanStatus::Inactive;
-            }
-            // Emit LoanLiquidated event
+            // Add function
         }
     }
-}
 
 // 5. Create the init() function of your contract.
 #[no_mangle]
