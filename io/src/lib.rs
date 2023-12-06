@@ -2,7 +2,7 @@
 #![no_std]
 use gstd::{ prelude::*, ActorId };
 use gmeta::{InOut,Metadata};
-
+use hashbrown::HashMap;
 
 
 // 1. Actions
@@ -53,10 +53,15 @@ pub struct Loans  {
 
     id: u128,    
     amount: u128, // The amount of the loan
+    collateral_amount: u128, // The amount of the collateral
+    ltv_ratio: u64, // The loan to Value ratio
     closing: LoanStatus, // The status of the loan 
-
+    
+    // delayed message como oraculo para MVP - roadmap Oraculo
 
 }
+
+
 
 #[derive(Encode, Decode, TypeInfo, Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
 pub enum LoanStatus {
@@ -92,18 +97,28 @@ impl Metadata for ContractMetadata {
     type Others = ();
     type Reply = ();
     type Signal = ();
-    type State = GlobalState;
+    type State = IoGlobalState;
 }
 
 // 5. Define the global state
 #[derive(Debug, Clone, Default, Encode, Decode, TypeInfo)]
-pub struct GlobalState {
-    pub borrowers: Vec<UserBorrower>,
-    pub lenders: Vec<UserLender>,
-    pub loans: Vec<Loans>,
-    pub loan_status: Vec<LoanStatus>,
-    pub liquidity_status: Vec<LiquidityStatus>,
-    pub user_status: Vec<UserStatus>,
-    pub liquidation_threshold: u128, // The liquidation threshold - Changed from Vec<u128> to u128
+pub struct IoGlobalState  {
+    pub borrowers: Vec<(ActorId,UserBorrower)>,
+    pub lenders: Vec<(ActorId,UserLender)>,
+    pub loans: Vec<(ActorId,Loans)>,
+    pub loan_status: Vec<(ActorId,LoanStatus)>,
+    pub liquidity_status: Vec<(ActorId,LiquidityStatus)>,
+    pub user_status: Vec<(ActorId,UserStatus)>,
+}
 
+#[derive(Debug, Clone, Default, TypeInfo)]
+pub struct GlobalState {
+
+    pub borrowers: HashMap<ActorId, UserBorrower>,
+    pub lenders: HashMap<ActorId, UserLender>,
+    pub loans: HashMap<ActorId, Loans>,
+    pub loan_status: HashMap<ActorId, LoanStatus>,
+    pub liquidity_status: HashMap<ActorId, LiquidityStatus>,
+    pub user_status: HashMap<ActorId, UserStatus>,
+    
 }
