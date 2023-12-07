@@ -1,8 +1,17 @@
 
 #![no_std]
-use gstd::{ prelude::*, ActorId };
-use gmeta::{InOut,Metadata};
+use gstd::{prelude::*, ActorId };
+use gmeta::{In, InOut,Metadata};
 use hashbrown::HashMap;
+
+
+#[derive(Decode, Encode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub struct InitFT {
+    pub syntheticasset_programid: ActorId,
+    pub stablecoin_programid: ActorId,
+}
 
 
 // 1. Actions
@@ -92,11 +101,12 @@ pub enum UserStatus {
 }
 
 
+
 pub struct ContractMetadata;
 
 // 4. Define the structure of actions, events and state for your metadata.
 impl Metadata for ContractMetadata {
-    type Init = ();
+    type Init = In<InitFT>;
     type Handle = InOut<Action, Event>;
     type Others = ();
     type Reply = ();
