@@ -1,6 +1,6 @@
 
 #![no_std]
-use gstd::{ msg , prelude::*,ActorId, async_main};
+use gstd::{exec, msg , prelude::*,ActorId, async_main};
 use io::*;
 
 #[cfg(feature = "binary-vendor")]
@@ -25,6 +25,8 @@ fn state_mut() -> &'static mut GlobalState {
 #[derive(Debug, Clone, Default)]
 pub struct GlobalState {
 
+    pub total_syntetic_deposited:u128,
+    pub total_stablecoin_deposited:u128,
     pub borrowers: HashMap<ActorId, UserBorrower>,
     pub lenders: HashMap<ActorId, UserLender>,
     pub loans: HashMap<ActorId, Loans>,
@@ -38,13 +40,13 @@ pub struct GlobalState {
 // 4. Create a implementation on State 
 impl GlobalState {
 
-    //transfer collateral to user - withdraw
+    //transfer collateral to user - withdraw funds
     async fn tokens_transfer_from_to_user(&mut self, amount: u128) {
  
         let _source = msg::source();
         let _current_globalstate =state_mut();
         let synthetic_programid = synthetic_state_mut();           
-        let payload = FTAction::Transfer{from: exec::program_id(), to: msg::source() ,amount: amount_tokens};
+        let payload = FTAction::Transfer{from: exec::program_id(), to: msg::source() ,amount: amount};
         let _ = msg::send(address_ft.ft_program_id, payload, 0);
        
 
@@ -55,90 +57,57 @@ impl GlobalState {
         let _source = msg::source();
         let _current_globalstate =state_mut();
         let synthetic_programid = synthetic_state_mut();           
-        let payload = FTAction::Transfer{from: msg::source(), to: exec::program_id(), amount: amount_tokens};
-        let _ = msg::send(address_ft.ft_program_id, payload, 0);
+        let payload = FTAction::Transfer{from: msg::source(), to: exec::program_id(), amount: amount};
+        let _ = msg::send(synthetic_programid.ft_program_id, payload, 0);
        
 
     }
 
-    
-
 
     #[allow(dead_code)]
-    pub fn deposit_funds(&mut self, amount: u128, lender: UserLender) {
-        // Access to register of lenders 
-        self.lenders
+    pub fn deposit_collateral(&mut self, amount: u128) {
+    
+        // Create a variable with mutable state.
+        let current_globalstate = state_mut();
+                
+        // Update state
+        current_globalstate.lenders
         .entry(msg::source())
-        .and_modify(|lender_info| {
+        .and_modify(|lender| {
             // If the lender exists, update the balance
-            lender_info.balance = lender_info.balance.saturating_add(amount);
+            current_globalstate.lenders.liquidity = current_globalstate.lenders.balance.saturating_add(amount);
+            current_globalstate.lenders = lender.loans_given.push(amount,LiquidityStatus::Active);
         })
-        .or_insert(UserLender {
-            // if the lender does not exist, create a new one
-            balance: amount,
-            ..Default::default()
+        .or_insert(
+            UserLender {
+                status: UserStatus::Active,
+                liquidity: amount,
+               ..Default
         });
 
-    // Increase the total deposited amount
-    self.total_deposited = self.total_deposited.saturating_add(amount);
+        // Transfer to Contract
+
+        current_globalstate.tokens_transfer_to_contract(amount);
+
+        // Increase the total deposited amount
+        current_globalstate.total_syntetic_deposited = current_globalstate.total_syntetic_deposited.saturating_add(amount);
 
 
     }
 
     #[allow(dead_code)]
     pub fn withdraw_funds(&mut self, amount: u128, lender: UserLender) {
-         // Access the lender record
-         if let Some(lender_info) = self.lenders.get_mut(&lender) {
-            // If the lender exists and has enough balance, decrease their balance
-            if lender_info.balance >= amount {
-                lender_info.balance = lender_info.balance.saturating_sub(amount);
-                // Decrease the total deposited funds
-                self.total_deposited = self.total_deposited.saturating_sub(amount);
-            } else {
-                // Handle the case where the lender does not have enough balance
-                // This could be an error or a different kind of handling depending on your requirements
-            }
-        } else {
-            // Handle the case where the lender does not exist
-            // This could be an error or a different kind of handling depending on your requirements
-        }
+     
     }
 
     #[allow(dead_code)]
     pub fn borrow(&mut self, amount: u128, borrower: UserBorrower) {
-        if let Some(borrower_info) = self.borrowers.get_mut(&borrower) {
-            // If the borrower exists, increase their loan amount
-            borrower_info.loan_amount = borrower_info.loan_amount.saturating_add(amount);
-        } else {
-            // If the borrower does not exist, create a new record with the initial loan amount
-            self.borrowers.insert(borrower, UserBorrower {
-                loan_amount: amount,
-                ..Default::default()
-            });
-        }
-
-        // Increase the total loaned amount
-        self.total_loaned = self.total_loaned.saturating_add(amount);    
+      
     }
 
     #[allow(dead_code)]
     pub fn repay(&mut self, amount: u128, borrower: UserBorrower) {
-        // Access the borrower record
-        if let Some(borrower_info) = self.borrowers.get_mut(&borrower) {
-            // If the borrower exists and has a loan amount greater than or equal to the repayment amount
-            if borrower_info.loan_amount >= amount {
-                // Decrease their loan amount
-                borrower_info.loan_amount = borrower_info.loan_amount.saturating_sub(amount);
-                // Decrease the total loaned amount
-                self.total_loaned = self.total_loaned.saturating_sub(amount);
-            } else {
-                // Handle the case where the borrower does not have a large enough loan to repay this amount
-                // This could be an error or a different kind of handling depending on your requirements
-            }
-        } else {
-            // Handle the case where the borrower does not exist
-            // This could be an error or a different kind of handling depending on your requirements
-        }    }
+          }
     
     #[allow(dead_code)]
     pub fn liquidate(&mut self, loan: Loans, liquidator: UserLender) {
@@ -162,66 +131,46 @@ async fn main(){
 
         // We load the input message
         let action = msg::load().expect("Could not load Action");
-        let _globalstate = unsafe { STATE.get_or_insert(GlobalState::default()) };
+      
+
 
         // We receive an action from the user and update the state. Example:
         match &action {
             Action::DepositFunds(amount) => {
 
-
-                // Create a variable with mutable state.
-                let current_globalstate = state_mut();
-                let userlender = current_globalstate.lenders.entry(msg::source()).or_insert(UserLender {
-                    status: UserStatus::Active,
-                    liquidity: amount,
-                    ..default
-                });
-                
-                current_globalstate.deposit_funds(*amount, user_lender);
+                current_globalstate.deposit_funds(amount);
 
 
-                }
-    
+                },
 
-            }
-            Action::WithdrawFunds => {
+            #[allow(dead_code)]
+            Action::WithdrawFunds(amount) => {
 
-                let currentstate = state_mut();
-
-                currentstate.firstfield = "Update".to_string();
-
-                let _ = msg::reply(Event::SecondEvent,0);
+               
                
 
-            }
-            Action::Borrow => {
+            },
+
+            #[allow(dead_code)]
+            Action::Borrow(amount) => {
                
-                let currentstate = state_mut();
+            
+            },
 
-                currentstate.firstfield = "Update".to_string();
-
-                let _ =  msg::reply(Event::ThirdEvent,0);
-            }
-
-            Action::Repay => {
+            #[allow(dead_code)]
+            Action::Repay(amount) => {
                
-                let currentstate = state_mut();
+         
+            },
 
-                currentstate.firstfield = "Update".to_string();
-
-                let _ =  msg::reply(Event::FourthEvent,0);
-            }
-
-            Action::Liquidate => {
+            #[allow(dead_code)]
+            Action::Liquidate(amount) => {
                
-                let currentstate = state_mut();
-
-                currentstate.firstfield = "Update".to_string();
-
-                let _ =  msg::reply(Event::FifthEvent,0);
             }
         };
+
     }
+    
 
         
 
@@ -239,6 +188,8 @@ impl From<GlobalState> for IoGlobalState {
 
     let GlobalState {
 
+        total_syntetic_deposited,
+        total_stablecoin_deposited,
         borrowers,
         lenders,
         loans,
@@ -252,11 +203,12 @@ impl From<GlobalState> for IoGlobalState {
     let lenders = lenders.iter().map(|(k, v)| (*k, v.clone())).collect();
     let loans = loans.iter().map(|(k, v)| (*k, v.clone())).collect();
     let loan_status = loan_status.iter().map(|(k, v)| (*k, v.clone())).collect();
-    let liqidity_status = loan_status.iter().map(|(k, v)| (*k, v.clone())).collect();
+    let liqidity_status = liquidity_status.iter().map(|(k, v)| (*k, v.clone())).collect();
     let user_status = user_status.iter().map(|(k, v)| (*k, v.clone())).collect();
 
     Self {
-
+        total_syntetic_deposited,
+        total_stablecoin_deposited,
         borrowers,
         lenders,
         loans,

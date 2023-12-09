@@ -2,7 +2,6 @@
 #![no_std]
 use gstd::{prelude::*, ActorId };
 use gmeta::{In, InOut,Metadata};
-use hashbrown::HashMap;
 
 
 #[derive(Decode, Encode, TypeInfo)]
@@ -15,7 +14,7 @@ pub struct InitFT {
 
 
 // 1. Actions
-#[derive(Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Decode, Encode, TypeInfo)]
 pub enum Action {
     //  Actions
     DepositFunds(u128), // User deposit funds into the protocol 
@@ -25,7 +24,7 @@ pub enum Action {
     Liquidate(u128), // A loan is liquidated because the loan to value ratio is lower than the minimum required
 }
 // 2.  Events
-#[derive(Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Clone, Decode, Encode, TypeInfo)]
 pub enum Event {
     //  Events
     FundsDeposited, // Funds have been deposited into the protocol
@@ -36,36 +35,65 @@ pub enum Event {
 }
 
 
+#[derive(Debug, Decode, Encode, TypeInfo)]
+#[codec(crate = gstd::codec)]
+#[scale_info(crate = gstd::scale_info)]
+pub enum FTAction {
+    Mint(u128),
+    Burn(u128),
+    Transfer {
+        from: ActorId,
+        to: ActorId,
+        amount: u128,
+    },
+    Approve {
+        to: ActorId,
+        amount: u128,
+    },
+    TotalSupply,
+    BalanceOf(ActorId),
+}
+
+
+#[derive(Encode, Decode, TypeInfo)]
+pub enum FTEvent {
+    Ok,
+    Err,
+    Balance(u128),
+    PermitId(u128),
+}
+
+
+
 // 3. Borrower struc
-#[derive(Debug, Clone)]
+#[derive(Default, Clone, Decode, Encode, TypeInfo)]
 pub struct UserBorrower {
 
    
     status: LoanStatus, // The status of the loan
-    loanamount: (u128), // The amount of the loan
+    loanamount: u128, // The amount of the loan
     ltvratio: u64, // The loan to Value ratio
     historial: Vec<(u128,Loans)> // The historial of the loans   
 
 }
 
 // 3. Provider struc
-#[derive(Debug, Clone)]
+#[derive(Default, Clone, Decode, Encode, TypeInfo)]
 pub struct UserLender {
-    status: UserStatus, // The status of the lender
-    liquidity: u128, // amount of liquidity provided
-    loans_given: Vec<(u128, LiquidityStatus)>, // The history of loans given
+    pub status: UserStatus, // The status of the lender
+    pub liquidity: u128, // amount of liquidity provided
+    pub loans_given: Vec<(u128, LiquidityStatus)>, // The history of loans given
 }
 
 // 3. Loan struc
-#[derive(Debug, Clone)]
-
+#[derive(Default, Clone, Decode, Encode, TypeInfo)]
 pub struct Loans  {
 
-    id: u128,    
-    amount: u128, // The amount of the loan
-    collateral_amount: u128, // The amount of the collateral
-    ltv_ratio: u64, // The loan to Value ratio
-    closing: LoanStatus, // The status of the loan 
+   pub id: u128,    
+   pub amount: u128, // The amount of the loan
+   pub collateral_amount: u128, // The amount of the collateral
+   pub ltv_ratio: u64, // The loan to Value ratio
+   pub closing: LoanStatus, // The status of the loan 
     
     // delayed message como oraculo para MVP - roadmap Oraculo
 
@@ -73,17 +101,17 @@ pub struct Loans  {
 
 
 
-#[derive(Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Default, Clone,Decode, Encode, TypeInfo)]
 pub enum LoanStatus {
     #[default]
     Active, // A loan is active
-    Inactive, // The loan has been repaid
+    Inactive, // The loan has been repaid or liquidated
 
 }
 
 
 
-#[derive(Hash, PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Default, Clone, Decode, Encode, TypeInfo)]
 pub enum LiquidityStatus {
     #[default]
     Active, // A liqudity positive is active
@@ -92,7 +120,7 @@ pub enum LiquidityStatus {
 }
 
 
-#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug)]
+#[derive(Default, Clone, Decode, Encode, TypeInfo)]
 pub enum UserStatus {
     #[default]
     Active, // A loan is active
@@ -115,24 +143,14 @@ impl Metadata for ContractMetadata {
 }
 
 // 5. Define the global state
-#[derive(Debug, Clone, Default)]
+#[derive(Default, Clone, Encode, Decode, TypeInfo)]
 pub struct IoGlobalState  {
+    pub total_syntetic_deposited:u128,
+    pub total_stablecoin_deposited:u128,
     pub borrowers: Vec<(ActorId,UserBorrower)>,
     pub lenders: Vec<(ActorId,UserLender)>,
     pub loans: Vec<(ActorId,Loans)>,
     pub loan_status: Vec<(ActorId,LoanStatus)>,
     pub liquidity_status: Vec<(ActorId,LiquidityStatus)>,
     pub user_status: Vec<(ActorId,UserStatus)>,
-}
-
-#[derive(Default, Encode, Decode, Clone, TypeInfo)]
-pub struct GlobalState {
-
-    pub borrowers: HashMap<ActorId, UserBorrower>,
-    pub lenders: HashMap<ActorId, UserLender>,
-    pub loans: HashMap<ActorId, Loans>,
-    pub loan_status: HashMap<ActorId, LoanStatus>,
-    pub liquidity_status: HashMap<ActorId, LiquidityStatus>,
-    pub user_status: HashMap<ActorId, UserStatus>,
-    
 }
