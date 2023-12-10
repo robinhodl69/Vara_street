@@ -10,6 +10,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 // 1. The main state as a static variable.
 static mut STATE: Option<GlobalState> = None;
 
+static mut ADDRESSFT:Option<InitFT> = None;
+
 
 // 2. The mutability function for state.
 fn state_mut() -> &'static mut GlobalState {
@@ -21,8 +23,18 @@ fn state_mut() -> &'static mut GlobalState {
 
 }
 
+
+fn ft_state_mut() -> &'static mut InitFT {
+
+    let addressft = unsafe { ADDRESSFT.as_mut()};
+
+    unsafe { addressft.unwrap_unchecked() }
+
+
+}
+
 // 3. Public State
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct GlobalState {
 
     pub total_syntetic_deposited:u128,
@@ -40,32 +52,91 @@ pub struct GlobalState {
 // 4. Create a implementation on State 
 impl GlobalState {
 
-    //transfer collateral to user - withdraw funds
-    async fn tokens_transfer_from_to_user(&mut self, amount: u128) {
+    //transfer collateral to user - withdraw
+    async fn synthetic_transfer_from_to_user(&mut self, amount: u128) {
  
         let _source = msg::source();
         let _current_globalstate =state_mut();
-        let synthetic_programid = synthetic_state_mut();           
+        let syntheticasset_programid = ft_state_mut();           
         let payload = FTAction::Transfer{from: exec::program_id(), to: msg::source() ,amount: amount};
-        let _ = msg::send(address_ft.ft_program_id, payload, 0);
+        let _ = msg::send(syntheticasset_programid.syntheticasset_programid, payload, 0);
        
 
     }
-    //transfer collateral to contract - deposit
-    async fn tokens_transfer_to_contract(&mut self, amount: u128) {
+
+    async fn  synthetic_transfer_to_contract(&mut self, amount: u128) {
  
         let _source = msg::source();
         let _current_globalstate =state_mut();
-        let synthetic_programid = synthetic_state_mut();           
+        let syntheticasset_programid = ft_state_mut();       
         let payload = FTAction::Transfer{from: msg::source(), to: exec::program_id(), amount: amount};
-        let _ = msg::send(synthetic_programid.ft_program_id, payload, 0);
+        let _ = msg::send(syntheticasset_programid.syntheticasset_programid, payload, 0);
+       
+    }
+
+
+    async fn stablecoin_transfer_from_to_user(&mut self, amount: u128) {
+ 
+        let  source = msg::source();
+        let _current_globalstate =state_mut();
+        let stablecoin_programid = ft_state_mut();          
+        let payload = FTAction::Transfer{from: exec::program_id(), to: source  ,amount: amount};
+        let _ = msg::send(stablecoin_programid.stablecoin_programid, payload, 0);
        
 
     }
+  
+    async fn stablecoin_transfer_to_contract(&mut self, amount: u128) {
+ 
+        let source = msg::source();
+        let _current_globalstate =state_mut();
+        let stablecoin_programid = ft_state_mut();           
+        let payload = FTAction::Transfer{from: source, to: exec::program_id(), amount: amount};
+        let _ = msg::send(stablecoin_programid.stablecoin_programid, payload, 0);
+       
+    }
+
+    
+   
+
+
 
 
     #[allow(dead_code)]
-    pub fn deposit_collateral(&mut self, amount: u128) {
+    async fn deposit_synthetic(&mut self, amount: u128) {
+    
+        // Create a variable with mutable state.
+        let current_globalstate = state_mut();
+
+        let collateral_available = (amount*50)/100;
+                
+        // Update state
+        current_globalstate.borrowers
+        .entry(msg::source())
+        .and_modify(|borrower| {
+            // If the lender exists, update the balance
+            borrower.loanamount   = borrower.loanamount.saturating_add(collateral_available);
+           
+        })
+        .or_insert(
+            UserBorrower {
+                status: LoanStatus::Active, 
+                loanamount:collateral_available,   
+                ltvratio: 50, 
+                ..Default::default()
+        });
+
+     
+        // Increase the total deposited amount
+        current_globalstate.total_syntetic_deposited = current_globalstate.total_syntetic_deposited.saturating_add(amount);
+
+
+    }
+
+
+
+    #[allow(dead_code)]
+    async fn deposit_collateral(&mut self, amount: u128) {
     
         // Create a variable with mutable state.
         let current_globalstate = state_mut();
@@ -75,42 +146,59 @@ impl GlobalState {
         .entry(msg::source())
         .and_modify(|lender| {
             // If the lender exists, update the balance
-            current_globalstate.lenders.liquidity = current_globalstate.lenders.balance.saturating_add(amount);
-            current_globalstate.lenders = lender.loans_given.push(amount,LiquidityStatus::Active);
+            lender.liquidity   = lender.liquidity.saturating_add(amount);
+           
         })
         .or_insert(
             UserLender {
                 status: UserStatus::Active,
                 liquidity: amount,
-               ..Default
+                ..Default::default()
         });
 
-        // Transfer to Contract
-
-        current_globalstate.tokens_transfer_to_contract(amount);
-
         // Increase the total deposited amount
-        current_globalstate.total_syntetic_deposited = current_globalstate.total_syntetic_deposited.saturating_add(amount);
+        current_globalstate.total_stablecoin_deposited = current_globalstate.total_stablecoin_deposited.saturating_add(amount);
 
 
     }
 
     #[allow(dead_code)]
-    pub fn withdraw_funds(&mut self, amount: u128, lender: UserLender) {
+    async fn withdraw_collateral(&mut self, amount: u128) {
+    
+        // Create a variable with mutable state.
+        let current_globalstate = state_mut();
+                
+        // Update state
+        current_globalstate.lenders
+        .entry(msg::source())
+        .and_modify(|lender| {
+            // If the lender exists, update the balance
+            lender.liquidity   = lender.liquidity.saturating_sub(amount);
+           
+        });
+
+        // Increase the total deposited amount
+        current_globalstate.total_stablecoin_deposited = current_globalstate.total_stablecoin_deposited.saturating_sub(amount);
+
+
+    }
+
+    #[allow(dead_code)]
+    pub fn withdraw_funds(&mut self, _amount: u128) {
      
     }
 
     #[allow(dead_code)]
-    pub fn borrow(&mut self, amount: u128, borrower: UserBorrower) {
+    pub fn borrow(&mut self, _amount: u128) {
       
     }
 
     #[allow(dead_code)]
-    pub fn repay(&mut self, amount: u128, borrower: UserBorrower) {
+    pub fn repay(&mut self, _amount: u128) {
           }
     
     #[allow(dead_code)]
-    pub fn liquidate(&mut self, loan: Loans, liquidator: UserLender) {
+    pub fn liquidate(&mut self) {
             // Add function - Pending
         }
     }
@@ -118,10 +206,35 @@ impl GlobalState {
 // 5. Create the init() function of your contract.
 #[no_mangle]
 extern "C" fn init() {
-    let state = GlobalState {
+
+     let config: InitFT = msg::load().expect("Unable to decode InitFT");
+
+     let state = GlobalState {
         ..Default::default()
     };
+ 
+  
+     if config.syntheticasset_programid.is_zero() {
+         panic!("FT program address can't be 0");
+     }
 
+
+     if config.stablecoin_programid.is_zero() {
+        panic!("FT program address can't be 0");
+    }
+
+    
+     let initft = InitFT {
+        syntheticasset_programid: config.syntheticasset_programid,
+        stablecoin_programid: config.stablecoin_programid
+
+     };
+    
+     
+     unsafe {
+         ADDRESSFT = Some(initft);
+     }
+ 
     unsafe { STATE = Some(state) };
 }
 
@@ -131,20 +244,27 @@ async fn main(){
 
         // We load the input message
         let action = msg::load().expect("Could not load Action");
+
+        let current_globalstate = unsafe {STATE.get_or_insert(GlobalState::default()) };
       
-
-
         // We receive an action from the user and update the state. Example:
         match &action {
             Action::DepositFunds(amount) => {
 
-                current_globalstate.deposit_funds(amount);
+
+                current_globalstate.deposit_collateral(*amount).await;
+
+                current_globalstate.stablecoin_transfer_to_contract(*amount).await;
 
 
                 },
 
             #[allow(dead_code)]
             Action::WithdrawFunds(amount) => {
+
+                current_globalstate.withdraw_collateral(*amount).await;
+
+                current_globalstate.stablecoin_transfer_from_to_user(*amount).await;
 
                
                
@@ -153,18 +273,22 @@ async fn main(){
 
             #[allow(dead_code)]
             Action::Borrow(amount) => {
+
+                current_globalstate.deposit_synthetic(*amount).await;
+                
+                current_globalstate.synthetic_transfer_to_contract(*amount).await;
                
             
             },
 
             #[allow(dead_code)]
-            Action::Repay(amount) => {
+            Action::Repay(_amount) => {
                
          
             },
 
             #[allow(dead_code)]
-            Action::Liquidate(amount) => {
+            Action::Liquidate(_amount) => {
                
             }
         };
@@ -203,7 +327,7 @@ impl From<GlobalState> for IoGlobalState {
     let lenders = lenders.iter().map(|(k, v)| (*k, v.clone())).collect();
     let loans = loans.iter().map(|(k, v)| (*k, v.clone())).collect();
     let loan_status = loan_status.iter().map(|(k, v)| (*k, v.clone())).collect();
-    let liqidity_status = liquidity_status.iter().map(|(k, v)| (*k, v.clone())).collect();
+    let liquidity_status = liquidity_status.iter().map(|(k, v)| (*k, v.clone())).collect();
     let user_status = user_status.iter().map(|(k, v)| (*k, v.clone())).collect();
 
     Self {

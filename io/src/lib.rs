@@ -70,10 +70,10 @@ pub enum FTEvent {
 pub struct UserBorrower {
 
    
-    status: LoanStatus, // The status of the loan
-    loanamount: u128, // The amount of the loan
-    ltvratio: u64, // The loan to Value ratio
-    historial: Vec<(u128,Loans)> // The historial of the loans   
+   pub status: LoanStatus, // The status of the loan
+   pub loanamount: u128, // The amount of the loan
+   pub ltvratio: u64, // The loan to Value ratio
+   pub historial: Vec<(u128,Loans)> // The historial of the loans   
 
 }
 
@@ -105,7 +105,7 @@ pub struct Loans  {
 pub enum LoanStatus {
     #[default]
     Active, // A loan is active
-    Inactive, // The loan has been repaid or liquidated
+    Inactive, // The loan has been repaid
 
 }
 
